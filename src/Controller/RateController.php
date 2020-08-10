@@ -5,6 +5,9 @@ namespace App\Controller;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
+use Symfony\Component\HttpFoundation\Response;
 use App\Entity\Rate;
     
 class RateController extends AbstractController
@@ -48,8 +51,28 @@ class RateController extends AbstractController
      * 
      * @Route("/rate/{countryCode}", name="singleRate")
      */
-    public function getRate(string $countryCode)
+    public function getRate(string $countryCode, ValidatorInterface $validator)
     {
+        $lengthConstraint = new Assert\Length([
+            'min' => 3,
+            'max' => 3,
+            'exactMessage' => 'Country code should be exactly {{ limit }} letters.',
+            'allowEmptyString' => false,
+        ]);
+        //$lengthConstraint->message = 'Country code should be exactly 3 letters.';
+    
+        $errors = $validator->validate(
+            $countryCode,
+            $lengthConstraint
+        );
+
+        if (count($errors) > 0) {
+            
+            $errorsString = (string) $errors;
+    
+            return new Response($errorsString);
+        }
+
         $rates = $this->getDoctrine()
         ->getRepository(Rate::class)
         ->findBy(array('country_code' => $countryCode), array('published_on' => 'DESC'), 3, 1);
